@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Configuration;
 using System.Diagnostics;
 using System.Timers;
 
@@ -8,8 +9,9 @@ namespace AppRestarter
     {
         public DateTime _runTime = new DateTime();
         private readonly Timer _timer;
-        public string _monitoredProcess = "notepad++";
-        public string _processExePath = @"C:\Program Files (x86)\Notepad++\Notepad++.exe";
+        public string _monitoredProcess = ConfigurationManager.AppSettings.Get("Process to monitor");
+        public string _processExePath = @"" + ConfigurationManager.AppSettings.Get("Path to .exe file to restart:");
+        public int _runtimeSeconds = Int32.Parse(ConfigurationManager.AppSettings.Get("RuntimeSeconds"));
         public Restarter()
         {
             _timer = new Timer(1000) { AutoReset = true };
@@ -20,7 +22,7 @@ namespace AppRestarter
         {
             //TODO: monitor selected service / kill and restart after given time, rinse repeat
             var startTime = GetProcessStartTime(_monitoredProcess);
-            _runTime = startTime.AddSeconds(8);
+            _runTime = startTime.AddSeconds(_runtimeSeconds);
             Console.WriteLine($"compare to value: {startTime.CompareTo(_runTime)}");
             if (DateTime.Now.CompareTo(_runTime) > 0)
             {
@@ -45,17 +47,13 @@ namespace AppRestarter
             _timer.Stop();
         }
 
-        //TODO: set max runtime from int in hours
-        //TODO: read target service name from config?
-        //TODO: read target total time from config?
-
         public DateTime GetProcessStartTime(string processName)
         {
             Console.WriteLine(processName);
             Process[] p = Process.GetProcessesByName(processName);
             if (p.Length <= 0)
             {
-                Console.WriteLine("Process not found");
+                Console.WriteLine("Process not running");
                 return DateTime.Now;
             }
             //throw new Exception("Process not found");
@@ -74,7 +72,15 @@ namespace AppRestarter
         }
         public void restartProcess(string processExePath)
         {
-            Process.Start(processExePath);
+            try
+            {
+                Process.Start(processExePath);
+            }
+            catch
+            {
+                Console.WriteLine("no exe file found");
+            }
+
         }
     }
 }
